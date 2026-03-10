@@ -1,41 +1,40 @@
 import os
-import google.generativeai as genai
+from groq import Groq
 
-# configure API key
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# load model
-model = genai.GenerativeModel("gemini-1.5-flash-latest")
+# configure Groq client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def generate_recommendations(resume_text, jd):
 
-    prompt = f"""
-You are an ATS resume analyzer.
+    prompt = f"""Extract only the skills from this resume. Output skill names only, one per line, no bullets, no numbers, no explanations, no extra text whatsoever.
 
-Compare the candidate resume with the job description.
+Resume:
+{resume_text}"""
 
-Job Description:
-{jd}
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+    )
 
-Candidate Resume:
-{resume_text}
+    return response.choices[0].message.content
 
-Return:
 
-1. ATS Match Score (0-100)
+def suggest_roles(skills, interests):
 
-2. Matching Skills
+    prompt = f"""You are a career advisor. Based on the candidate's skills and their selected role interests, suggest the top 5 most suitable job roles for them.
 
-3. Missing Skills
+Candidate Skills:
+{skills}
 
-4. Resume Strengths
+Role Interests Selected by Candidate:
+{interests}
 
-5. Suggestions to Improve Resume
+Return ONLY a list of 5 specific job role titles, one per line, no numbers, no bullets, no explanations. Just the role titles."""
 
-6. Final Recommendation
-"""
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+    )
 
-    response = model.generate_content(prompt)
-
-    return response.text
+    return response.choices[0].message.content
