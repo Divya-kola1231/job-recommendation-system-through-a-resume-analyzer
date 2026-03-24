@@ -1,19 +1,32 @@
-import React, { useState } from "react";
-import UploadResume from "./components/UploadResume";
-import ResultPage from "./components/ResultPage";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import "./App.css";
+
+import Navbar          from "./components/Navbar";
+import HomePage        from "./components/HomePage";
+import UploadResume    from "./components/UploadResume";
+import JobsPage        from "./components/JobsPage";
+import AdminLogin      from "./components/AdminLogin";
+import AdminDashboard  from "./components/admindashboard";
 
 function App() {
-
-  const [result, setResult] = useState("");
-
   return (
-    <div>
+    <BrowserRouter>
+      <Navbar />
+      <Routes>
+        {/* Public routes */}
+        <Route path="/"               element={<HomePage />} />
+        <Route path="/upload"         element={<UploadResume />} />
+        <Route path="/jobs"           element={<JobsPage />} />
 
-      <UploadResume setResult={setResult} />
+        {/* Admin routes */}
+        <Route path="/admin-login"    element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
-      {result && <ResultPage result={result} />}
-
-    </div>
+        {/* Catch-all */}
+        <Route path="*"               element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

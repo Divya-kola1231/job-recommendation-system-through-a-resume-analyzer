@@ -1,198 +1,409 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const ROLE_INTERESTS = [
-  "Frontend Developer",
-  "Backend Developer",
-  "Full Stack Developer",
-  "Data Scientist",
-  "Machine Learning Engineer",
-  "DevOps Engineer",
-  "Cloud Engineer",
-  "Mobile Developer",
-  "UI/UX Designer",
-  "Product Manager",
-  "Cybersecurity Analyst",
-  "Data Analyst",
+const EXPERIENCE_LEVELS = [
+  { label: "Fresher (0-1 years)",   emoji: "🌱" },
+  { label: "Junior (1-3 years)",    emoji: "🚀" },
+  { label: "Mid-level (3-5 years)", emoji: "💼" },
+  { label: "Senior (5+ years)",     emoji: "🏆" },
 ];
 
-function UploadResume() {
-  const [resume, setResume] = useState(null);
-  const [skills, setSkills] = useState([]);
-  const [selectedInterests, setSelectedInterests] = useState([]);
-  const [suggestedRoles, setSuggestedRoles] = useState([]);
-  const [matchingJobs, setMatchingJobs] = useState([]);
-  const [loadingSkills, setLoadingSkills] = useState(false);
-  const [loadingRoles, setLoadingRoles] = useState(false);
-  const [error, setError] = useState("");
-
-  // Step 1: Extract skills
-  const handleAnalyze = async () => {
-    if (!resume) { setError("Please select a resume file."); return; }
-    setError("");
-    setSkills([]);
-    setSuggestedRoles([]);
-    setSelectedInterests([]);
-    setMatchingJobs([]);
-    setLoadingSkills(true);
-    try {
-      const formData = new FormData();
-      formData.append("resume", resume);
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/analyze/`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      const raw = response.data.analysis || "";
-      const parsed = raw.split("\n").map((s) => s.trim()).filter((s) => s.length > 0);
-      setSkills(parsed);
-    } catch {
-      setError("Failed to analyze resume. Please try again.");
-    } finally {
-      setLoadingSkills(false);
-    }
-  };
-
-  // Step 2: Toggle interest
-  const toggleInterest = (role) => {
-    setSelectedInterests((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
-  };
-
-  // Step 3: Get role suggestions + match jobs
-  const handleSuggestRoles = async () => {
-    if (selectedInterests.length === 0) { setError("Please select at least one interest."); return; }
-    setError("");
-    setSuggestedRoles([]);
-    setMatchingJobs([]);
-    setLoadingRoles(true);
-    try {
-      // 1. Get role suggestions
-      const responseRoles = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/suggest-roles/`,
-        { skills, interests: selectedInterests },
-        { headers: { "Content-Type": "application/json" } }
-      );
-      const roles = responseRoles.data.roles || [];
-      setSuggestedRoles(roles);
-
-      // 2. Fetch live job openings
-      if (roles.length > 0) {
-        const responseJobs = await axios.post(
-          `${process.env.REACT_APP_API_URL}/api/jobs/`,
-          { roles: roles.slice(0, 3), location: "India" }, // search top 3 roles
-          { headers: { "Content-Type": "application/json" } }
-        );
-        setMatchingJobs(responseJobs.data.jobs || []);
-      }
-    } catch {
-      setError("Failed to get role suggestions or jobs. Please try again.");
-    } finally {
-      setLoadingRoles(false);
-    }
-  };
-
+function StepBar({ current }) {
+  const steps = ["Upload Resume", "Select Roles", "Job Matches"];
   return (
-    <div style={{ maxWidth: 660, margin: "40px auto", fontFamily: "sans-serif", padding: "0 20px" }}>
-      <h2>📄 Resume Analyzer</h2>
-
-      {/* Step 1 */}
-      <div style={{ marginBottom: 20 }}>
-        <input type="file" accept=".pdf,.docx" onChange={(e) => setResume(e.target.files[0])} />
-        <button onClick={handleAnalyze} disabled={loadingSkills} style={btnStyle("#1565c0")}>
-          {loadingSkills ? "Extracting..." : "Analyze Resume"}
-        </button>
-      </div>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {/* Skills */}
-      {skills.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <h3>📋 Skills Found</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {skills.map((skill, i) => (
-              <span key={i} style={tagStyle}>{skill}</span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Role Interests */}
-      {skills.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <h3>🎯 Select Your Role Interests</h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {ROLE_INTERESTS.map((role) => {
-              const selected = selectedInterests.includes(role);
-              return (
-                <button key={role} onClick={() => toggleInterest(role)} style={{
-                  padding: "6px 14px", borderRadius: 20, cursor: "pointer", fontSize: 14,
-                  border: selected ? "2px solid #1565c0" : "1px solid #ccc",
-                  background: selected ? "#1565c0" : "#fff",
-                  color: selected ? "#fff" : "#333",
-                }}>
-                  {selected ? "✓ " : ""}{role}
-                </button>
-              );
-            })}
-          </div>
-          {selectedInterests.length > 0 && (
-            <button onClick={handleSuggestRoles} disabled={loadingRoles} style={{ ...btnStyle("#2e7d32"), marginTop: 16 }}>
-              {loadingRoles ? "Suggesting..." : "Get Role Suggestions →"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: Suggested Roles */}
-      {suggestedRoles.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <h3>✅ Suggested Roles for You</h3>
-          <ul style={{ paddingLeft: 20 }}>
-            {suggestedRoles.map((role, i) => (
-              <li key={i} style={{ marginBottom: 6, fontSize: 15 }}>{role}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Step 4: Job Openings */}
-      {matchingJobs.length > 0 && (
-        <div>
-          <h3>💼 Job Openings for You</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {matchingJobs.map((job) => (
-              <div key={job.id} style={cardStyle}>
-                <div style={{ fontWeight: "bold", fontSize: 16 }}>{job.title}</div>
-                <div style={{ color: "#555", fontSize: 14 }}>{job.company} · {job.location}</div>
-                <div style={{ fontSize: 13, color: "#888" }}>{job.type}</div>
-                <a href={job.link} target="_blank" rel="noreferrer" style={{ marginTop: 6, display: "inline-block", color: "#1565c0", fontSize: 14 }}>
-                  View & Apply →
-                </a>
+    <div className="steps">
+      {steps.map((label, i) => {
+        const num   = i + 1;
+        const state = num < current ? "done" : num === current ? "active" : "";
+        return (
+          <React.Fragment key={i}>
+            <div className={`step ${state}`}>
+              <div className="step__circle">
+                {num < current ? "✓" : num}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <span className="step__label">{label}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`step__line ${num < current ? "done" : ""}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 }
 
-const btnStyle = (bg) => ({
-  marginLeft: 10, padding: "8px 20px", background: bg,
-  color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14,
-});
+export default function UploadResume() {
+  const navigate = useNavigate();
 
-const tagStyle = {
-  background: "#e3f2fd", border: "1px solid #90caf9",
-  borderRadius: 16, padding: "4px 12px", fontSize: 13,
-};
+  // User info
+  const [username, setUsername] = useState("");
+  const [email, setEmail]       = useState("");
 
-const cardStyle = {
-  border: "1px solid #e0e0e0", borderRadius: 10,
-  padding: "14px 16px", background: "#fafafa",
-};
+  // File
+  const [resume, setResume]     = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef            = useRef(null);
 
-export default UploadResume;
+  // Data
+  const [skills, setSkills]                   = useState([]);
+  const [suggestedRoles, setSuggestedRoles]   = useState([]);
+  const [selectedRoles, setSelectedRoles]     = useState([]);
+  const [selectedExperience, setSelectedExperience] = useState("");
+
+  // UI
+  const [step, setStep]       = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+  const [savedMsg, setSavedMsg] = useState("");
+
+  // ── Drag & Drop ────────────────────────────────────────────────────────────
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith(".pdf") || file.name.endsWith(".docx"))) {
+      setResume(file);
+      setError("");
+    } else {
+      setError("Please drop a PDF or DOCX file.");
+    }
+  }, []);
+
+  const handleDragOver  = (e) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = ()  => setDragOver(false);
+  const handleFileChange = (e) => { if (e.target.files[0]) setResume(e.target.files[0]); };
+
+  const formatSize = (bytes) => {
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  // ── Step 1: Analyze resume ─────────────────────────────────────────────────
+  const handleAnalyze = async () => {
+    if (!username.trim()) { setError("Please enter your name."); return; }
+    if (!email.trim())    { setError("Please enter your email."); return; }
+    if (!resume)          { setError("Please upload your resume."); return; }
+
+    setError(""); setSavedMsg(""); setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", resume);
+      formData.append("username", username.trim());
+      formData.append("email", email.trim());
+
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/analyze/`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      const raw    = res.data.analysis || "";
+      const parsed = raw.split("\n").map((s) => s.trim()).filter(Boolean);
+      setSkills(parsed);
+      setSuggestedRoles(res.data.suggested_roles || []);
+      setSavedMsg("✅ Resume saved to your profile!");
+      setStep(2);
+    } catch {
+      setError("Failed to analyze resume. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Skill add / remove ───────────────────────────────────────────────────
+  const [newSkill, setNewSkill] = useState("");
+
+  const handleAddSkill = () => {
+    const trimmed = newSkill.trim();
+    if (!trimmed) return;
+    if (skills.map((s) => s.toLowerCase()).includes(trimmed.toLowerCase())) return;
+    setSkills((prev) => [...prev, trimmed]);
+    setNewSkill("");
+  };
+
+  const handleRemoveSkill = (index) => {
+    setSkills((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSkillKeyDown = (e) => {
+    if (e.key === "Enter") handleAddSkill();
+  };
+
+  // ── Toggle role ────────────────────────────────────────────────────────────
+  const toggleRole = (role) =>
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
+
+  const canProceed = selectedRoles.length > 0 && selectedExperience !== "";
+
+  // ── Step 2: Go to Jobs page ─────────────────────────────────────────────────
+  const handleFindJobs = () => {
+    if (!canProceed) {
+      setError("Please select at least one role and an experience level.");
+      return;
+    }
+    // Pass all data via router state to JobsPage
+    navigate("/jobs", {
+      state: {
+        selectedRoles,
+        selectedExperience,
+        skills,
+        username,
+      },
+    });
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="page">
+      <div className="upload-page">
+
+        <div className="upload-page__header animate-fadeUp">
+          <h1 className="upload-page__title">
+            Analyze Your <span>Resume</span>
+          </h1>
+          <p className="upload-page__sub">
+            Upload your resume, pick your roles and experience level, then see live job matches.
+          </p>
+        </div>
+
+        <StepBar current={step} />
+
+        {error && <p className="error-msg">⚠ {error}</p>}
+
+        {/* ── STEP 1: Details + Upload ── */}
+        <div className="card animate-fadeUp">
+          <div className="card__title">👤 Your Details</div>
+          <div className="card__sub">Enter your name and email before we analyze.</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            <div className="field">
+              <label>Full Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Divya Kola"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={step > 1}
+              />
+            </div>
+            <div className="field">
+              <label>Email Address</label>
+              <input
+                type="email"
+                placeholder="e.g. divya@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={step > 1}
+              />
+            </div>
+          </div>
+
+          {/* Drag & Drop */}
+          {step === 1 && (
+            <>
+              <div
+                className={`dropzone ${dragOver ? "drag-over" : ""}`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input ref={fileInputRef} type="file" accept=".pdf,.docx" onChange={handleFileChange} />
+                {!resume ? (
+                  <>
+                    <span className="dropzone__icon">📄</span>
+                    <p className="dropzone__title">Drag & drop your resume here</p>
+                    <p className="dropzone__sub">Supports PDF and DOCX · Max 5MB</p>
+                    <span className="dropzone__btn">📁 Browse Files</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="dropzone__icon">✅</span>
+                    <p className="dropzone__title">File ready to analyze!</p>
+                    <div className="dropzone__file" onClick={(e) => e.stopPropagation()}>
+                      <span>📎</span>
+                      <span className="dropzone__file-name">{resume.name}</span>
+                      <span className="dropzone__file-size">{formatSize(resume.size)}</span>
+                      <span
+                        style={{ marginLeft: "auto", cursor: "pointer", color: "var(--white-dim)", fontSize: 12 }}
+                        onClick={(e) => { e.stopPropagation(); setResume(null); }}
+                      >
+                        ✕ Remove
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="action-bar">
+                <button className="btn-find" onClick={handleAnalyze} disabled={loading}>
+                  {loading
+                    ? <><span className="btn-find__spinner" /> Analyzing...</>
+                    : "Analyze Resume →"}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step > 1 && savedMsg && <p className="success-msg">{savedMsg}</p>}
+        </div>
+
+        {/* ── STEP 2: Skills + Roles + Experience ── */}
+        {step >= 2 && (
+          <>
+            {/* Skills */}
+            <div className="card animate-fadeUp">
+              <div className="card__title">📋 Skills Extracted</div>
+              <div className="card__sub">
+                {skills.length} skills found · click ✕ to remove, or add your own below.
+              </div>
+
+              {/* Skill tags with remove button */}
+              <div className="tags" style={{ marginBottom: 20 }}>
+                {skills.map((s, i) => (
+                  <span key={i} style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "5px 10px 5px 14px",
+                    background: "rgba(0,212,184,0.1)",
+                    border: "1px solid rgba(0,212,184,0.25)",
+                    borderRadius: 100, fontSize: 13, color: "var(--teal)",
+                  }}>
+                    {s}
+                    <button
+                      onClick={() => handleRemoveSkill(i)}
+                      title="Remove skill"
+                      style={{
+                        background: "rgba(0,212,184,0.2)", border: "none",
+                        borderRadius: "50%", width: 18, height: 18,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", color: "var(--teal)",
+                        fontSize: 10, fontWeight: 700, lineHeight: 1,
+                        flexShrink: 0, transition: "background 0.15s",
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = "rgba(248,113,113,0.3)"}
+                      onMouseOut={(e)  => e.currentTarget.style.background = "rgba(0,212,184,0.2)"}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* Add custom skill */}
+              <div style={{
+                display: "flex", gap: 10, alignItems: "center",
+                padding: "14px 16px",
+                background: "rgba(255,255,255,0.02)",
+                border: "1.5px dashed var(--border)",
+                borderRadius: 10,
+              }}>
+                <span style={{ fontSize: 16 }}>➕</span>
+                <input
+                  type="text"
+                  placeholder="Add a skill (e.g. Docker, Figma)..."
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={handleSkillKeyDown}
+                  style={{
+                    flex: 1, background: "transparent", border: "none",
+                    outline: "none", fontSize: 14, color: "var(--white)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                />
+                <button
+                  onClick={handleAddSkill}
+                  disabled={!newSkill.trim()}
+                  style={{
+                    padding: "7px 16px", borderRadius: 8,
+                    background: newSkill.trim() ? "var(--teal)" : "rgba(255,255,255,0.05)",
+                    color: newSkill.trim() ? "var(--navy)" : "var(--white-dim)",
+                    border: "none", cursor: newSkill.trim() ? "pointer" : "not-allowed",
+                    fontSize: 13, fontWeight: 700,
+                    fontFamily: "var(--font-body)",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Roles */}
+            <div className="card animate-fadeUp">
+              <div className="card__title">✅ Suggested Roles</div>
+              <div className="card__sub">Select the roles you want to explore.</div>
+              <div className="role-list">
+                {suggestedRoles.map((role, i) => {
+                  const checked = selectedRoles.includes(role);
+                  return (
+                    <div
+                      key={i}
+                      className={`role-item ${checked ? "checked" : ""}`}
+                      onClick={() => toggleRole(role)}
+                    >
+                      <div className="role-item__check">
+                        {checked && (
+                          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="var(--navy)" strokeWidth="2.5"
+                              strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="role-item__label">{role}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Experience */}
+            <div className="card animate-fadeUp">
+              <div className="card__title">🎓 Experience Level</div>
+              <div className="card__sub">Filter jobs by your experience level.</div>
+              <div className="exp-grid">
+                {EXPERIENCE_LEVELS.map(({ label, emoji }) => (
+                  <button
+                    key={label}
+                    className={`exp-btn ${selectedExperience === label ? "selected" : ""}`}
+                    onClick={() => setSelectedExperience(label)}
+                  >
+                    <span className="exp-btn__emoji">{emoji}</span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {selectedRoles.length > 0 && !selectedExperience && (
+                <p className="hint">⚠ Please also select an experience level.</p>
+              )}
+              {selectedRoles.length === 0 && selectedExperience && (
+                <p className="hint">⚠ Please also select at least one role.</p>
+              )}
+
+              <div className="action-bar">
+                <button
+                  className="btn-find"
+                  onClick={handleFindJobs}
+                  disabled={!canProceed}
+                >
+                  Find Matching Jobs →
+                </button>
+                {canProceed && (
+                  <span className="action-summary">
+                    {selectedRoles.length} role{selectedRoles.length > 1 ? "s" : ""} · {selectedExperience}
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
