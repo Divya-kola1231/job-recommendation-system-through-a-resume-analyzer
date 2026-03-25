@@ -67,6 +67,28 @@ def fetch_jobs_view(request):
     return JsonResponse({"message": "Invalid request"})
 
 
+# ── Suggest Roles (for skill-based re-suggestion) ────────────────────────────
+@csrf_exempt
+def suggest_roles_view(request):
+    if request.method == "POST":
+        try:
+            data     = json.loads(request.body)
+            skills   = data.get("skills", [])
+
+            if not skills:
+                return JsonResponse({"error": "Missing skills"})
+
+            skills_text = "\n".join(skills)
+            roles_raw   = suggest_roles(skills_text, "")
+            role_list   = [r.strip() for r in roles_raw.split("\n") if r.strip()]
+
+            return JsonResponse({"roles": role_list})
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"message": "Invalid request"})
+
+
 # ── Admin Login ────────────────────────────────────────────────────────────────
 @csrf_exempt
 def admin_login_view(request):

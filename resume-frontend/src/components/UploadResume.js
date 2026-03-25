@@ -38,8 +38,8 @@ export default function UploadResume() {
   const navigate = useNavigate();
 
   // User info
-  const [username, setUsername] = useState("");
-  const [email, setEmail]       = useState("");
+  const [username, setUsername] = useState(localStorage.getItem("user_name")  || "");
+  const [email, setEmail]       = useState(localStorage.getItem("user_email") || "");
 
   // File
   const [resume, setResume]     = useState(null);
@@ -104,6 +104,9 @@ export default function UploadResume() {
       const parsed = raw.split("\n").map((s) => s.trim()).filter(Boolean);
       setSkills(parsed);
       setSuggestedRoles(res.data.suggested_roles || []);
+      // Remember name and email for next time
+      localStorage.setItem("user_name",  username.trim());
+      localStorage.setItem("user_email", email.trim());
       setSavedMsg("✅ Resume saved to your profile!");
       setStep(2);
     } catch {
@@ -114,14 +117,41 @@ export default function UploadResume() {
   };
 
   // ── Skill add / remove ───────────────────────────────────────────────────
-  const [newSkill, setNewSkill] = useState("");
+  const [newSkill, setNewSkill]         = useState("");
+  const [suggestingRoles, setSuggestingRoles] = useState(false);
+
+  // Re-suggest roles from updated skills list and merge with existing
+  const resuggestRoles = async (updatedSkills) => {
+    setSuggestingRoles(true);
+    try {
+      const res = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/suggest-roles/`,
+        { skills: updatedSkills, interests: [] },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const newRoles = res.data.roles || [];
+      // Merge — add only roles not already in the list
+      setSuggestedRoles((prev) => {
+        const existing = prev.map((r) => r.toLowerCase());
+        const toAdd    = newRoles.filter((r) => !existing.includes(r.toLowerCase()));
+        return [...prev, ...toAdd];
+      });
+    } catch {
+      // silently fail — roles already shown from original analysis
+    } finally {
+      setSuggestingRoles(false);
+    }
+  };
 
   const handleAddSkill = () => {
     const trimmed = newSkill.trim();
     if (!trimmed) return;
     if (skills.map((s) => s.toLowerCase()).includes(trimmed.toLowerCase())) return;
-    setSkills((prev) => [...prev, trimmed]);
+    const updatedSkills = [...skills, trimmed];
+    setSkills(updatedSkills);
     setNewSkill("");
+    // Re-suggest roles based on updated skills
+    resuggestRoles(updatedSkills);
   };
 
   const handleRemoveSkill = (index) => {
@@ -335,8 +365,28 @@ export default function UploadResume() {
 
             {/* Roles */}
             <div className="card animate-fadeUp">
-              <div className="card__title">✅ Suggested Roles</div>
-              <div className="card__sub">Select the roles you want to explore.</div>
+              <div className="card__title">
+                ✅ Suggested Roles
+                {suggestingRoles && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    marginLeft: 12, fontSize: 12, fontWeight: 500,
+                    color: "var(--teal)",
+                  }}>
+                    <span className="btn-find__spinner" style={{
+                      width: 12, height: 12,
+                      borderColor: "rgba(0,212,184,0.2)",
+                      borderTopColor: "var(--teal)",
+                    }} />
+                    Updating roles...
+                  </span>
+                )}
+              </div>
+              <div className="card__sub">
+                {suggestingRoles
+                  ? "Finding new roles based on your added skill..."
+                  : `${suggestedRoles.length} roles suggested · select what interests you.`}
+              </div>
               <div className="role-list">
                 {suggestedRoles.map((role, i) => {
                   const checked = selectedRoles.includes(role);
