@@ -120,8 +120,10 @@ export default function UploadResume() {
   const [newSkill, setNewSkill]         = useState("");
   const [suggestingRoles, setSuggestingRoles] = useState(false);
 
-  // Re-suggest roles from updated skills list and merge with existing
-  const resuggestRoles = async (updatedSkills) => {
+  // Re-suggest roles from updated skills list
+  // replace=true  → fully replace roles (used when removing a skill)
+  // replace=false → merge new roles with existing (used when adding a skill)
+  const resuggestRoles = async (updatedSkills, replace = false) => {
     setSuggestingRoles(true);
     try {
       const res = await axios.post(
@@ -130,14 +132,20 @@ export default function UploadResume() {
         { headers: { "Content-Type": "application/json" } }
       );
       const newRoles = res.data.roles || [];
-      // Merge — add only roles not already in the list
-      setSuggestedRoles((prev) => {
-        const existing = prev.map((r) => r.toLowerCase());
-        const toAdd    = newRoles.filter((r) => !existing.includes(r.toLowerCase()));
-        return [...prev, ...toAdd];
-      });
+      if (replace) {
+        // Fully replace — fresh list based only on remaining skills
+        setSuggestedRoles(newRoles);
+        setSelectedRoles([]);
+      } else {
+        // Merge — only add roles not already in the list
+        setSuggestedRoles((prev) => {
+          const existing = prev.map((r) => r.toLowerCase());
+          const toAdd    = newRoles.filter((r) => !existing.includes(r.toLowerCase()));
+          return [...prev, ...toAdd];
+        });
+      }
     } catch {
-      // silently fail — roles already shown from original analysis
+      // silently fail
     } finally {
       setSuggestingRoles(false);
     }
@@ -155,7 +163,16 @@ export default function UploadResume() {
   };
 
   const handleRemoveSkill = (index) => {
-    setSkills((prev) => prev.filter((_, i) => i !== index));
+    const updatedSkills = skills.filter((_, i) => i !== index);
+    setSkills(updatedSkills);
+    if (updatedSkills.length > 0) {
+      // replace=true → fresh roles based only on remaining skills
+      resuggestRoles(updatedSkills, true);
+    } else {
+      // No skills left — clear everything
+      setSuggestedRoles([]);
+      setSelectedRoles([]);
+    }
   };
 
   const handleSkillKeyDown = (e) => {
@@ -294,6 +311,21 @@ export default function UploadResume() {
               </div>
 
               {/* Skill tags with remove button */}
+              {skills.length === 0 ? (
+                <div style={{
+                  padding: "20px", textAlign: "center",
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1.5px dashed var(--border)",
+                  borderRadius: 10, marginBottom: 20,
+                }}>
+                  <p style={{ fontSize: 14, color: "var(--white-dim)", marginBottom: 4 }}>
+                    🗂 No skills to display
+                  </p>
+                  <p style={{ fontSize: 12, color: "rgba(136,153,170,0.5)" }}>
+                    Add skills manually using the input below.
+                  </p>
+                </div>
+              ) : (
               <div className="tags" style={{ marginBottom: 20 }}>
                 {skills.map((s, i) => (
                   <span key={i} style={{
@@ -323,6 +355,7 @@ export default function UploadResume() {
                   </span>
                 ))}
               </div>
+              )}
 
               {/* Add custom skill */}
               <div style={{
