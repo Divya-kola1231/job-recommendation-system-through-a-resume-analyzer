@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key')
 # Application definition
 # ADD THESE TWO LINES
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ["*"]
 INSTALLED_APPS = [
     'corsheaders',
     'django.contrib.admin',
