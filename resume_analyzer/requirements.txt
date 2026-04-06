@@ -41,14 +41,6 @@ urllib3==2.3.0
 charset-normalizer==3.4.1
 idna==3.10
 
-# ML lightweight - replaces spacy
-scikit-learn==1.5.2
-scipy==1.13.1
-joblib==1.4.2
-numpy==1.26.4
-threadpoolctl==3.5.0
-nltk==3.9.1
-
 # Utils
 tqdm==4.67.1
 typing_extensions==4.12.2
