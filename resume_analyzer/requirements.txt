@@ -27,7 +27,6 @@ protobuf==5.29.4
 # PDF Processing
 pdfminer.six==20221105
 pdfplumber==0.11.4
-pypdfium2==4.30.0
 pillow==10.4.0
 
 # Document Processing
@@ -42,15 +41,13 @@ urllib3==2.3.0
 charset-normalizer==3.4.1
 idna==3.10
 
-# NLP - SpaCy (lightweight)
-spacy==3.7.5
-numpy==1.26.4
-
-# ML
+# ML lightweight - replaces spacy
 scikit-learn==1.5.2
 scipy==1.13.1
 joblib==1.4.2
+numpy==1.26.4
 threadpoolctl==3.5.0
+nltk==3.9.1
 
 # Utils
 tqdm==4.67.1
