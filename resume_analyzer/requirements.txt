@@ -16,14 +16,8 @@ psycopg2-binary==2.9.11
 # Environment
 python-dotenv==1.2.2
 
-# Google AI (httpx>=0.28.1 required by google-genai)
-google-genai==1.16.0
-google-api-core==2.30.0
-google-auth==2.38.0
-googleapis-common-protos==1.72.0
-proto-plus==1.27.1
-protobuf==5.29.4
-httpx>=0.28.1
+# Groq AI (what you actually use!)
+groq==1.1.0
 
 # PDF Processing
 pdfminer.six==20221105
@@ -36,13 +30,13 @@ lxml==5.3.0
 
 # HTTP
 requests==2.32.3
+httpx==0.28.1
 certifi==2024.12.14
 urllib3==2.3.0
 charset-normalizer==3.4.1
 idna==3.10
 
 # Utils
-tqdm==4.67.1
 typing_extensions==4.12.2
 packaging==24.2
 click==8.1.8
