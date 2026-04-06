@@ -18,10 +18,32 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key')
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-raw_allowed_hosts = os.environ.get('ALLOWED_HOSTS', '*')
-ALLOWED_HOSTS = [host.strip() for host in raw_allowed_hosts.split(',') if host.strip()]
-if not ALLOWED_HOSTS:
-    ALLOWED_HOSTS = ['*']
+# ─── ALLOWED HOSTS ────────────────────────────────────────────────────────────
+# Render default domain pattern for this app
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '')
+
+if DEBUG:
+    # Development: Accept localhost and 127.0.0.1
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*.localhost']
+else:
+    # Production: Explicitly list allowed hosts
+    allowed_hosts_str = os.environ.get('ALLOWED_HOSTS', '')
+    
+    if RENDER_EXTERNAL_HOSTNAME:
+        # On Render, use the provided external hostname
+        ALLOWED_HOSTS = [RENDER_EXTERNAL_HOSTNAME]
+    elif allowed_hosts_str:
+        # Fallback: parse from ALLOWED_HOSTS environment variable (comma-separated)
+        ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_str.split(',') if h.strip()]
+    else:
+        # No hosts configured - this will cause DisallowedHost errors
+        # Set one via environment variable
+        ALLOWED_HOSTS = []
+        
+    # Ensure the list is not empty
+    if not ALLOWED_HOSTS:
+        # This is a safety net, but ideally ALLOWED_HOSTS should be explicitly set
+        ALLOWED_HOSTS = ['job-recommendation-system-through-a-piij.onrender.com']
 
 # Application definition
 INSTALLED_APPS = [
