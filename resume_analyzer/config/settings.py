@@ -18,7 +18,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key')
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+raw_allowed_hosts = os.environ.get('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [host.strip() for host in raw_allowed_hosts.split(',') if host.strip()]
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
