@@ -227,7 +227,7 @@ export default function UploadResume() {
           <div className="card__title">👤 Your Details</div>
           <div className="card__sub">Enter your name and email before we analyze.</div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          <div className="details-grid">
             <div className="field">
               <label>Full Name</label>
               <input
