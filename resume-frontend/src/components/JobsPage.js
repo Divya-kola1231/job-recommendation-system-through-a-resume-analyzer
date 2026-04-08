@@ -69,7 +69,7 @@ export default function JobsPage() {
 
   return (
     <div className="page">
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 32px", display: "grid", gridTemplateColumns: "260px 1fr", gap: 32, alignItems: "start" }}>
+      <div className="jobs-layout">
 
         {/* ── Sidebar filters ── */}
         <aside style={{ position: "sticky", top: 88 }}>
